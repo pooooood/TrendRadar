@@ -18,13 +18,37 @@ jobs:
     steps:
       # 🔥 新增：清理本 workflow 的旧运行记录，只保留最新的 1 次
       - name: Clean up old workflow runs (keep only latest)
-        uses: Mattraks/delete-workflow-runs@v2
+        uses: actions/github-script@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          workflow_id: ${{ github.workflow }}  # 对应 name: "Hot News Crawler"
-          keep_minimum_runs: 1                # 保留最近 1 次（已完成的）
-          # 注意：当前正在运行的 run 不会被删除，这是 GitHub 的限制
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // 👇 注意：这里必须写你的实际 workflow 文件名！
+            const WORKFLOW_FILE = 'crawler.yml';
+
+            console.log(`Listing completed runs for workflow: ${WORKFLOW_FILE}`);
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: WORKFLOW_FILE,
+              status: 'completed', // 只处理已完成的 runs
+              per_page: 100
+            });
+
+            if (runs.total_count <= 1) {
+              console.log('✅ No old runs to delete (≤1 run exists).');
+              return;
+            }
+
+            // 保留最新的 1 次（runs[0]），删除其余
+            for (let i = 1; i < runs.total_count && i < runs.length; i++) {
+              const run = runs[i];
+              console.log(`🗑️ Deleting run #${run.run_number} (ID: ${run.id}, created: ${run.created_at})`);
+              await github.rest.actions.deleteWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: run.id
+              });
+            }
 
       - name: Checkout repository
         uses: actions/checkout@v3
