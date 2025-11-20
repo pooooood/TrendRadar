@@ -2,19 +2,30 @@ name: Hot News Crawler
 
 on:
   schedule:
-    # 我们使用的是 github 官方提供的资源来进行的推送，而每个账号的资源是限额的，为了不被官方判定为滥用而面临封号的风险，不建议比半小时更低
-    - cron: "0 * * * *" # 每小时整点运行一次(实际有偏差) 或者 "*/30 * * * *" (每半小时执行一次) 或者 "*/30 0-14 * * *"(每天早上 8 点到晚上 10 点期间，每半小时运行一次)
+    # 每小时整点运行一次（实际有偏差）
+    - cron: "0 * * * *"
   workflow_dispatch:
 
-# 添加权限设置
+# 必须显式声明 actions 权限才能删除 runs
 permissions:
   contents: write
+  actions: write  # 👈 新增：允许删除 workflow runs
 
 jobs:
   crawl:
     runs-on: ubuntu-latest
 
     steps:
+      # 🔥 新增：清理本 workflow 的旧运行记录，只保留最新的 1 次
+      - name: Clean up old workflow runs (keep only latest)
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          workflow_id: ${{ github.workflow }}  # 对应 name: "Hot News Crawler"
+          keep_minimum_runs: 1                # 保留最近 1 次（已完成的）
+          # 注意：当前正在运行的 run 不会被删除，这是 GitHub 的限制
+
       - name: Checkout repository
         uses: actions/checkout@v3
 
