@@ -51,13 +51,27 @@ notification:
     once_per_day: true  # 每天在时间窗口内只推送一次，如果 false，则窗口内每次执行都推送
     push_record_retention_days: 1  # 推送记录保留天数
 
-  # 请务必妥善保管好 webhooks，不要公开
-  # 如果你以 fork 的方式将本项目部署在 GitHub 上，请勿在此填写任何 webhooks，而是将 webhooks 填入 GitHub Secret
-  # 不然轻则手机上收到奇怪的广告推送，重则存在更严重的安全隐患
+  # ⚠️⚠️⚠️ 重要安全警告 / IMPORTANT SECURITY WARNING ⚠️⚠️⚠️
+  #
+  # 🔴 请务必妥善保管好 webhooks，不要公开!!!
+  # 🔴 如果你以 fork 的方式将本项目部署在 GitHub 上，请勿在下面填写任何 webhooks
+  # 🔴 而是将 webhooks 填入 GitHub Secret（Settings → Secrets and variables → Actions）
+  # 🔴 否则：
+  #    - 轻则：手机上收到大量垃圾广告推送
+  #    - 重则：webhook 被滥用造成严重安全隐患（如恶意消息轰炸、钓鱼链接等）
+  #
+  # 🔴 NEVER expose webhooks publicly!!!
+  # 🔴 If deploying via GitHub fork, DO NOT fill webhooks below
+  # 🔴 Instead, add them to GitHub Secrets (Settings → Secrets and variables → Actions)
+  # 🔴 Consequences of exposure:
+  #    - Minor: Spam notifications flooding your devices
+  #    - Severe: Webhook abuse leading to security incidents (malicious messages, phishing links, etc.)
+  #
   webhooks:
     feishu_url: "" # 飞书机器人的 webhook URL
     dingtalk_url: "" # 钉钉机器人的 webhook URL
     wework_url: "" # 企业微信机器人的 webhook URL
+    wework_msg_type: "markdown" # 企业微信消息类型：markdown(群机器人) 或 text(个人微信应用)
     telegram_bot_token: "" # Telegram Bot Token
     telegram_chat_id: "" # Telegram Chat ID
     email_from: "" # 发件人邮箱地址
