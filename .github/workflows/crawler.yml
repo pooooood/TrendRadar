@@ -2,57 +2,57 @@ name: Hot News Crawler
 
 on:
   schedule:
-    # 每小时整点运行一次（实际有偏差）
     - cron: "0 * * * *"
   workflow_dispatch:
 
-# 必须显式声明 actions 权限才能删除 runs
 permissions:
   contents: write
-  actions: write   # 允许删除 workflow runs
+  actions: write
 
 jobs:
   crawl:
     runs-on: ubuntu-latest
 
     steps:
-      # 🔥 修复后的：清理旧 workflow runs，只保留最新的 1 次
-      - name: Clean up old workflow runs (keep only latest)
+      - name: Clean up workflow runs (keep only 1 run)
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // workflow 文件必须写完整路径！
             const WORKFLOW_FILE = '.github/workflows/crawler.yml';
-
-            console.log(`Listing completed runs for workflow: ${WORKFLOW_FILE}`);
 
             const { data } = await github.rest.actions.listWorkflowRuns({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: WORKFLOW_FILE,
-              status: 'completed',
-              per_page: 100
+              per_page: 100,
             });
 
             const runs = data.workflow_runs;
-            console.log(`Found ${runs.length} completed runs.`);
+            console.log(`Found ${runs.length} runs.`);
 
+            // 如果只有 1 条或没有可删的，直接退出
             if (runs.length <= 1) {
-              console.log('No old runs to delete.');
+              console.log("Nothing to delete.");
               return;
             }
 
-            // 保留最新的 1 条，删除其余
+            // 保留最上面 1 条（最新的）
             for (let i = 1; i < runs.length; i++) {
               const run = runs[i];
-              console.log(`🗑️ Deleting run #${run.run_number} (ID: ${run.id})`);
-              await github.rest.actions.deleteWorkflowRun({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                run_id: run.id
-              });
+              try {
+                console.log(`Deleting run #${run.run_number} (ID: ${run.id})`);
+                await github.rest.actions.deleteWorkflowRun({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  run_id: run.id
+                });
+              } catch (error) {
+                console.log(`⚠️ Cannot delete run #${run.run_number}, skipping. Reason: ${error.message}`);
+              }
             }
+
+            console.log("Cleanup completed. Should keep only 1 run now.");
 
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -73,13 +73,11 @@ jobs:
 
           if [ ! -f config/config.yaml ]; then
             echo "❌ 错误: config/config.yaml 文件不存在"
-            echo "请参考项目文档创建配置文件"
             exit 1
           fi
 
           if [ ! -f config/frequency_words.txt ]; then
             echo "❌ 错误: config/frequency_words.txt 文件不存在"
-            echo "请参考项目文档创建频率词配置文件"
             exit 1
           fi
 
