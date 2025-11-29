@@ -59,6 +59,7 @@ jobs:
               }
             }
             console.log("Cleanup completed. Should keep only 1 run now.");
+      
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
