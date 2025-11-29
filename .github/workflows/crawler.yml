@@ -25,6 +25,40 @@ jobs:
     timeout-minutes: 30
     
     steps:
+      - name: Clean up workflow runs (keep only 1 run)
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const WORKFLOW_FILE = '.github/workflows/crawler.yml';
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: WORKFLOW_FILE,
+              per_page: 100,
+            });
+            const runs = data.workflow_runs;
+            console.log(`Found ${runs.length} runs.`);
+            // 如果只有 1 条或没有可删的，直接退出
+            if (runs.length <= 1) {
+              console.log("Nothing to delete.");
+              return;
+            }
+            // 保留最上面 1 条（最新的）
+            for (let i = 1; i < runs.length; i++) {
+              const run = runs[i];
+              try {
+                console.log(`Deleting run #${run.run_number} (ID: ${run.id})`);
+                await github.rest.actions.deleteWorkflowRun({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  run_id: run.id
+                });
+              } catch (error) {
+                console.log(`⚠️ Cannot delete run #${run.run_number}, skipping. Reason: ${error.message}`);
+              }
+            }
+            console.log("Cleanup completed. Should keep only 1 run now.");
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
